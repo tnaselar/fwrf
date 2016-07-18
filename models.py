@@ -1,9 +1,11 @@
 import lasagne
 import numpy as np
+from fwrf.layers import *
 from theano import tensor as tnsr
 from theano import function, shared
 from types import GeneratorType
-from hrf_fitting.src.features import make_space
+from fwrf.utils import make_space, set_named_model_params
+from fwrf.learners import *
 
 
 ##TODO: GENERALIZE SO THAT NOT COMMITTED TO GAUSSIAN RF MODEL
@@ -101,7 +103,14 @@ class rf_model_space(object):
             
             ##only one feature map stack or the first map stack:
             if not rf_space_list:  
-                self.rf_layer = receptive_field_layer(l1,num_voxels,(Xm,Ym),deg_per_stim,x0=rf_init['x0'], y0=rf_init['y0'], sig=rf_init['sig'],name='rf_'+f_map_name)
+                self.rf_layer = receptive_field_layer(l1,
+                                                      num_voxels,
+                                                      (Xm,Ym),
+                                                      deg_per_stim,
+                                                      x0=rf_init['x0'],
+                                                      y0=rf_init['y0'],
+                                                      sig=rf_init['sig'],
+                                                      name='rf_'+f_map_name)
                 rf_space_list.append(self.rf_layer)
             else: ##rf centers/sizes will be shared
                 rf_space_list.append(receptive_field_layer(l1,num_voxels,(Xm,Ym),deg_per_stim,
@@ -112,7 +121,8 @@ class rf_model_space(object):
     
         self.rf_model_space = lasagne.layers.ConcatLayer(rf_space_list,axis=1, name='rf_model_space')
         
-        self.construct_model_space_tensor = function(self.input_var_dict.values(), lasagne.layers.get_output(self.rf_model_space))
+        self.construct_model_space_tensor = function(self.input_var_dict.values(),
+                                                     lasagne.layers.get_output(self.rf_model_space))
     
     def normalize(self, calibration_data_generator, epsilon=0., unstable=10e-10):
         mst = []
@@ -125,7 +135,8 @@ class rf_model_space(object):
         self.rf_model_space = normalization_layer(self.rf_model_space, mean=mn, stdev=stdev, mask=stability_mask)
         self.epsilon=epsilon
         self.unstable=unstable
-        self.construct_model_space_tensor = function(self.input_var_dict.values(), lasagne.layers.get_output(self.rf_model_space))
+        self.construct_model_space_tensor = function(self.input_var_dict.values(),
+                                                     lasagne.layers.get_output(self.rf_model_space))
         
 
 ##a fwrf model

@@ -2,7 +2,7 @@ import lasagne
 import numpy as np
 from theano import tensor as tnsr
 from theano import function, shared
-
+from fwrf.utils import set_named_model_params
 
 class batch_model_learner(object):
     

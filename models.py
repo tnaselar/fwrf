@@ -167,16 +167,18 @@ class fwrf(rf_model_space):
     
     def __init__(self, *args, **kwargs):
         self.bonus_layers = kwargs.pop('bonus_layers', None)
-        NU = kwargs.pop('NU', lasagne.init.Constant([0]))
+        init_NU = kwargs.pop('NU', lasagne.init.Constant([0]))
  
         super(fwrf, self).__init__(*args, **kwargs)  ##this creates the rf_model_space
+    
+        
 
         if self.bonus_layers is not None:
-            self.stack_feature_layers = lambda x: feature_weights_layer(self.bonus_layers(x),NU=NU)
+            self.stack_feature_layers = lambda x, feature_weights: feature_weights_layer(self.bonus_layers(x),NU=feature_weights)
         else:
-            self.stack_feature_layers = lambda x: feature_weights_layer(x,NU=NU)
+            self.stack_feature_layers = lambda x, feature_weights: feature_weights_layer(x,NU=feature_weights)
             
-        self.fwrf = self.stack_feature_layers(self.rf_model_space)
+        self.fwrf = self.stack_feature_layers(self.rf_model_space,init_NU)
         
         self.pred_expr = lasagne.layers.get_output(self.fwrf)
         
@@ -316,6 +318,8 @@ class fwrf(rf_model_space):
         set_named_model_params(self.fwrf, y0=best_rfs[1])
         set_named_model_params(self.fwrf, sig=best_rfs[2])
         
+
+        
         ##return training history
         return best_loss
         
@@ -415,11 +419,12 @@ class fwrf(rf_model_space):
     def normalize(self, *args, **kwargs):
         ##TODO: Should check to make sure no normalization yet!
         
-        ##call the model_space method
+        ##call the model_space method: this adds a normalization layer
         super(fwrf, self).normalize(*args, **kwargs)
         
-        ##then overwrite the feature layer
-        self.fwrf = self.stack_feature_layers(self.rf_model_space)
+        ##then overwrite the feature layer, preserving current NU, whatever that is.
+        feature_weights = get_named_params(self.fwrf, 'feature_weights') ##<<gives a dict with key='feature_weights'
+        self.fwrf = self.stack_feature_layers(self.rf_model_space,feature_weights['feature_weights'])
         
         ##and update the prediction expressions/functions
         self.pred_expr = lasagne.layers.get_output(self.fwrf)

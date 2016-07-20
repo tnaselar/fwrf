@@ -4,7 +4,7 @@ from fwrf.layers import *
 from theano import tensor as tnsr
 from theano import function, shared
 from types import GeneratorType
-from fwrf.utils import make_space, set_named_model_params
+from fwrf.utils import make_space, set_named_model_params,get_model_params_names
 from fwrf.learners import *
 
 
@@ -313,10 +313,20 @@ class fwrf(rf_model_space):
          
         ##assign this back to fwrf
         ##BAD: THIS IS SICKENINGLY NOT GENERAL.
-        set_named_model_params(self.fwrf, feature_weights=best_params)
-        set_named_model_params(self.fwrf, x0=best_rfs[0])
-        set_named_model_params(self.fwrf, y0=best_rfs[1])
-        set_named_model_params(self.fwrf, sig=best_rfs[2])
+        
+        
+        param_kwargs = {}
+        for name in get_model_params_names(self.fwrf):
+            if 'sig' in name:
+                param_kwargs[name] = best_rfs[2].astype('float32')
+            if 'x0' in name:
+                param_kwargs[name] = best_rfs[0].astype('float32')
+            if 'y0' in name:
+                param_kwargs[name] = best_rfs[1].astype('float32')
+            if 'feature_weights' in name:
+                param_kwargs[name] = best_params.astype('float32')
+                           
+        set_named_model_params(self.fwrf, **param_kwargs)
         
 
         
